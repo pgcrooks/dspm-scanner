@@ -13,17 +13,9 @@ import (
 func main() {
 	fmt.Println("Running dspm-scanner")
 
-	// Load the Shared AWS Configuration (~/.aws/config)
-	cfg, err := config.LoadDefaultConfig(context.TODO())
-	if err != nil {
-		log.Fatal(err)
-	}
+	client := newS3Client()
 
-	// Create an Amazon S3 service client
-	client := s3.NewFromConfig(cfg)
-
-	var contents []scanner_int.BucketObject
-	err = scanner_int.GetS3BucketContents(*client, "pgcrooks-dspm", &contents)
+	contents, err := scanner_int.ListS3Bucket(context.TODO(), client, "pgcrooks-dspm")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -32,4 +24,15 @@ func main() {
 	for _, object := range contents {
 		log.Printf("key=%s size=%d", object.Key, object.Size)
 	}
+}
+
+func newS3Client() *s3.Client {
+	// Load the Shared AWS Configuration (~/.aws/config)
+	cfg, err := config.LoadDefaultConfig(context.TODO())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	client := s3.NewFromConfig(cfg)
+	return client
 }
