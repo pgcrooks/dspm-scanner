@@ -1,6 +1,6 @@
 package scanner_int
 
-type bucket_object struct {
-	key  string
-	size int
+type BucketObject struct {
+	Key  string
+	Size int64
 }

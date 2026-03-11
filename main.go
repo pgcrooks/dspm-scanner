@@ -1,13 +1,13 @@
-package dspm_scanner
+package main
 
 import (
 	"context"
 	"fmt"
 	"log"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	scanner_int "github.com/pgcrooks/dspm-scanner/internal"
 )
 
 func main() {
@@ -22,16 +22,14 @@ func main() {
 	// Create an Amazon S3 service client
 	client := s3.NewFromConfig(cfg)
 
-	// Get the first page of results for ListObjectsV2 for a bucket
-	output, err := client.ListObjectsV2(context.TODO(), &s3.ListObjectsV2Input{
-		Bucket: aws.String("pgcrooks-dspm"),
-	})
+	var contents []scanner_int.BucketObject
+	err = scanner_int.GetS3BucketContents(*client, "pgcrooks-dspm", &contents)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	log.Println("first page results")
-	for _, object := range output.Contents {
-		log.Printf("key=%s size=%d", aws.ToString(object.Key), *object.Size)
+	for _, object := range contents {
+		log.Printf("key=%s size=%d", object.Key, object.Size)
 	}
 }
