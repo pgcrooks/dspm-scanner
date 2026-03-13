@@ -16,7 +16,9 @@ before:
     - go generate ./...
 
 builds:
-  - main: ./cmd/scraper/scraper.go
+  - id: scraper
+    binary: scraper
+    main: ./cmd/scraper/scraper.go
     env:
       - CGO_ENABLED=0
     goos:
