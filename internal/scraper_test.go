@@ -66,9 +66,15 @@ func TestListS3ucket(t *testing.T) {
 					var testContents []types.Object
 					oneKey := "one"
 					var oneSize int64 = 42
+					twoKey := "two"
+					var twoSize int64 = 100
 					testContents = append(testContents, types.Object{
 						Key:  &oneKey,
 						Size: &oneSize,
+					})
+					testContents = append(testContents, types.Object{
+						Key:  &twoKey,
+						Size: &twoSize,
 					})
 
 					return &s3.ListObjectsV2Output{
@@ -77,10 +83,11 @@ func TestListS3ucket(t *testing.T) {
 				})
 			},
 			bucket: "test-bucket-2",
-			expect: []BucketObject{{
-				Key:  "one",
-				Size: 42,
-			},
+			expect: []BucketObject{
+				{
+					Key:  "one",
+					Size: 42,
+				},
 				{
 					Key:  "two",
 					Size: 100,
