@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	fmt.Println("Running dspm-scanner")
+	fmt.Println("Running scraper")
 
 	client := newS3Client()
 
