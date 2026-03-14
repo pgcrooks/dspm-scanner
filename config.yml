@@ -1,0 +1,6 @@
+aws:
+  enabled: false
+  bucket_name: "pgcrooks-dspm"
+local:
+  enabled: true
+  bucket_path: "./"
