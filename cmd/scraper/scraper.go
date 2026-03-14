@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 
 	"github.com/spf13/viper"
 
@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	log.Println("starting scraper")
+	slog.Info("starting scraper")
 
 	viper.SetConfigName("config")
 	viper.AddConfigPath(".")
@@ -23,52 +23,54 @@ func main() {
 	}
 
 	if viper.GetBool("aws.enabled") {
-		log.Println("aws enabled")
+		slog.Debug("aws enabled")
 
 		bucketName := viper.GetString("aws.bucket_name")
 
-		client := newS3Client()
-
-		contents, err := scanner_int.ListS3Bucket(context.TODO(), client, bucketName)
+		client, err := newS3Client()
 		if err != nil {
-			log.Fatal(err)
+			slog.Error("unable to create AWS client", "err", err.Error())
+		} else {
+			contents, err := scanner_int.ListS3Bucket(context.TODO(), client, bucketName)
+			if err != nil {
+				slog.Error(err.Error())
+			} else {
+				slog.Info("first page results")
+				for _, object := range contents {
+					slog.Info("key=%s size=%d", object.Key, object.Size)
+				}
+			}
 		}
 
-		log.Println("first page results")
-		for _, object := range contents {
-			log.Printf("key=%s size=%d", object.Key, object.Size)
-		}
 	} else {
-		log.Println("aws disabled")
+		slog.Debug("aws disabled")
 	}
 
 	if viper.GetBool("local.enabled") {
-		log.Println("local enabled")
+		slog.Info("local enabled")
 
 		directory := viper.GetString("local.path")
 
-		log.Printf("reading %s", directory)
-
 		contents, err := scanner_int.ListLocalBucket(context.TODO(), directory)
 		if err != nil {
-			log.Fatal(err)
-		}
-
-		for _, object := range contents {
-			log.Printf("key=%s size=%d", object.Key, object.Size)
+			slog.Error(err.Error())
+		} else {
+			for _, object := range contents {
+				slog.Info("found", "key", object.Key, "size", object.Size)
+			}
 		}
 	} else {
-		log.Println("local disabled")
+		slog.Debug("local disabled")
 	}
 }
 
-func newS3Client() *s3.Client {
+func newS3Client() (*s3.Client, error) {
 	// Load the Shared AWS Configuration (~/.aws/config)
 	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	client := s3.NewFromConfig(cfg)
-	return client
+	return client, nil
 }
