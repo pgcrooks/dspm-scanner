@@ -44,6 +44,19 @@ func main() {
 
 	if viper.GetBool("local.enabled") {
 		log.Println("local enabled")
+
+		directory := viper.GetString("local.path")
+
+		log.Printf("reading %s", directory)
+
+		contents, err := scanner_int.ListLocalBucket(context.TODO(), directory)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		for _, object := range contents {
+			log.Printf("key=%s size=%d", object.Key, object.Size)
+		}
 	} else {
 		log.Println("local disabled")
 	}

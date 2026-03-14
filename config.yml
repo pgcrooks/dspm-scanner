@@ -3,4 +3,4 @@ aws:
   bucket_name: "pgcrooks-dspm"
 local:
   enabled: true
-  bucket_path: "./"
+  path: "/home/pgcrooks/dev/dspm-scanner/test/data/"
