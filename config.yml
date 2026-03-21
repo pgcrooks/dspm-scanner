@@ -4,3 +4,6 @@ aws:
 local:
   enabled: true
   path: "/home/pgcrooks/dev/dspm-scanner/test/data/"
+db:
+  driver: "sqlite"
+  path: "/home/pgcrooks/dev/dspm-scanner/dspm.db"
