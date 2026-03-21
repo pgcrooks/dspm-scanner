@@ -18,6 +18,12 @@ func main() {
 		panic(fmt.Errorf("fatal error config file: %w", err))
 	}
 
+	ds, err := scanner_int.InitDataStore(context.TODO(), scanner_int.LocalDB)
+	if err != nil {
+		panic(fmt.Errorf("cannot init ds: %w", err))
+	}
+	defer ds.Close()
+
 	if config.Aws.Enabled {
 		slog.Debug("aws enabled")
 
@@ -51,6 +57,9 @@ func main() {
 		} else {
 			for _, object := range contents {
 				slog.Info("found", "key", object.Key, "size", object.Size)
+
+				// Write object to DB
+
 			}
 		}
 	} else {
