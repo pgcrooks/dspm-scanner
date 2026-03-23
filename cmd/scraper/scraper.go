@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/spf13/viper"
-
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	scanner_int "github.com/pgcrooks/dspm-scanner/internal"
@@ -15,23 +13,21 @@ import (
 func main() {
 	slog.Info("starting scraper")
 
-	viper.SetConfigName("config")
-	viper.AddConfigPath(".")
-	err := viper.ReadInConfig()
+	config, err := scanner_int.GetConfig()
 	if err != nil {
 		panic(fmt.Errorf("fatal error config file: %w", err))
 	}
 
-	if viper.GetBool("aws.enabled") {
+	if config.Aws.Enabled {
 		slog.Debug("aws enabled")
-
-		bucketName := viper.GetString("aws.bucket_name")
 
 		client, err := newS3Client()
 		if err != nil {
 			slog.Error("unable to create AWS client", "err", err.Error())
 		} else {
-			contents, err := scanner_int.ListS3Bucket(context.TODO(), client, bucketName)
+			contents, err := scanner_int.ListS3Bucket(
+				context.TODO(), client, config.Aws.BucketName,
+			)
 			if err != nil {
 				slog.Error(err.Error())
 			} else {
@@ -46,12 +42,10 @@ func main() {
 		slog.Debug("aws disabled")
 	}
 
-	if viper.GetBool("local.enabled") {
+	if config.Local.Enabled {
 		slog.Info("local enabled")
 
-		directory := viper.GetString("local.path")
-
-		contents, err := scanner_int.ListLocalBucket(context.TODO(), directory)
+		contents, err := scanner_int.ListLocalBucket(context.TODO(), config.Local.Path)
 		if err != nil {
 			slog.Error(err.Error())
 		} else {
