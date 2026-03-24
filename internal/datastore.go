@@ -38,7 +38,7 @@ func (ds DataStore) Close() {
 	}
 }
 
-func (ds DataStore) RunDataService(ctx context.Context, messageChan <-chan []BucketObject) {
+func (ds DataStore) RunDataService(ctx context.Context, messageChan <-chan BucketObjectBatch) {
 	slog.Info("starting DataService")
 
 	for range 5 {

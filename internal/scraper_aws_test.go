@@ -20,7 +20,7 @@ func TestListS3ucket(t *testing.T) {
 	cases := []struct {
 		client func(t *testing.T) S3API
 		bucket string
-		expect []BucketObject
+		expect BucketObjectBatch
 	}{
 		{
 			client: func(t *testing.T) S3API {
@@ -47,7 +47,7 @@ func TestListS3ucket(t *testing.T) {
 				})
 			},
 			bucket: "test-bucket",
-			expect: []BucketObject{{
+			expect: BucketObjectBatch{{
 				Key:  "one",
 				Size: 42,
 			}},
@@ -83,7 +83,7 @@ func TestListS3ucket(t *testing.T) {
 				})
 			},
 			bucket: "test-bucket-2",
-			expect: []BucketObject{
+			expect: BucketObjectBatch{
 				{
 					Key:  "one",
 					Size: 42,

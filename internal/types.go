@@ -7,6 +7,8 @@ type BucketObject struct {
 	Size int64
 }
 
+type BucketObjectBatch []BucketObject
+
 type Config struct {
 	Aws struct {
 		Enabled    bool
