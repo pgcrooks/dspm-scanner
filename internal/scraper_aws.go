@@ -12,7 +12,7 @@ type S3API interface {
 	ListObjectsV2(ctx context.Context, params *s3.ListObjectsV2Input, optFns ...func(*s3.Options)) (*s3.ListObjectsV2Output, error)
 }
 
-func ListS3Bucket(ctx context.Context, api S3API, bucket_name string) ([]BucketObject, error) {
+func ListS3Bucket(ctx context.Context, api S3API, bucket_name string) (BucketObjectBatch, error) {
 	output, err := api.ListObjectsV2(context.TODO(), &s3.ListObjectsV2Input{
 		Bucket: aws.String(bucket_name),
 	})
@@ -20,7 +20,7 @@ func ListS3Bucket(ctx context.Context, api S3API, bucket_name string) ([]BucketO
 		return nil, fmt.Errorf("can not list bucket. %v", err)
 	}
 
-	var contents []BucketObject
+	var contents BucketObjectBatch
 	for _, object := range output.Contents {
 		obj := BucketObject{
 			Key:  aws.ToString(object.Key),

@@ -13,13 +13,13 @@ type LocalAPI interface {
 	ReadDir(path string) ([]os.DirEntry, error)
 }
 
-func ListLocalBucket(ctx context.Context, path string) ([]BucketObject, error) {
+func ListLocalBucket(ctx context.Context, path string) (BucketObjectBatch, error) {
 	files, err := os.ReadDir(path)
 	if err != nil {
 		return nil, fmt.Errorf("can not list bucket. %v", err)
 	}
 
-	var contents []BucketObject
+	var contents BucketObjectBatch
 	for _, file := range files {
 		// Ignore directories
 		if !file.IsDir() {
@@ -40,7 +40,7 @@ func ListLocalBucket(ctx context.Context, path string) ([]BucketObject, error) {
 	return contents, nil
 }
 
-func RunScraperService(ctx context.Context, cfg Config, messageChan chan<- []BucketObject) {
+func RunScraperService(ctx context.Context, cfg Config, messageChan chan<- BucketObjectBatch) {
 	slog.Info("starting ScraperService")
 
 	for range 5 {

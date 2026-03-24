@@ -26,7 +26,7 @@ func main() {
 	defer ds.Close()
 
 	// Communication channels
-	scrapeMessages := make(chan []scanner_int.BucketObject, 100)
+	scrapeMessages := make(chan scanner_int.BucketObjectBatch, 100)
 
 	var wg sync.WaitGroup
 	wg.Go(func() {
