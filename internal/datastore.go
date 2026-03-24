@@ -3,10 +3,13 @@ package scanner_int
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"time"
 )
 
 type DataStoreAPI interface {
 	Close()
+	RunDataService()
 }
 
 func InitDataStore(ctx context.Context, dsType DataStoreType) (DataStore, error) {
@@ -33,4 +36,20 @@ func (ds DataStore) Close() {
 	default:
 		// No-op
 	}
+}
+
+func (ds DataStore) RunDataService(ctx context.Context, messageChan <-chan []BucketObject) {
+	slog.Info("starting DataService")
+
+	for range 5 {
+		select {
+		case msg1 := <-messageChan:
+			for _, object := range msg1 {
+				slog.Info("rx scrape_data", "key", object.Key, "size", object.Size)
+			}
+		}
+	}
+	time.Sleep(time.Second * 10)
+
+	slog.Info("terminated DataService")
 }

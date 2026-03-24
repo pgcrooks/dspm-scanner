@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
+	"time"
 )
 
 type LocalAPI interface {
@@ -36,4 +38,21 @@ func ListLocalBucket(ctx context.Context, path string) ([]BucketObject, error) {
 		}
 	}
 	return contents, nil
+}
+
+func RunScraperService(ctx context.Context, cfg Config, messageChan chan<- []BucketObject) {
+	slog.Info("starting ScraperService")
+
+	for range 5 {
+		contents, err := ListLocalBucket(ctx, cfg.Local.Path)
+		if err != nil {
+			slog.Error(err.Error())
+		} else {
+			messageChan <- contents
+		}
+
+		time.Sleep(time.Second * 1)
+	}
+
+	slog.Info("terminated ScraperService")
 }

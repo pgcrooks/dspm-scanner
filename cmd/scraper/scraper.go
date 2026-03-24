@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -11,7 +12,7 @@ import (
 )
 
 func main() {
-	slog.Info("starting scraper")
+	slog.Info("starting scraper orchestrator")
 
 	config, err := scanner_int.GetConfig()
 	if err != nil {
@@ -23,6 +24,14 @@ func main() {
 		panic(fmt.Errorf("cannot init ds: %w", err))
 	}
 	defer ds.Close()
+
+	// Communication channels
+	scrapeMessages := make(chan []scanner_int.BucketObject, 100)
+
+	var wg sync.WaitGroup
+	wg.Go(func() {
+		ds.RunDataService(context.TODO(), scrapeMessages)
+	})
 
 	if config.Aws.Enabled {
 		slog.Debug("aws enabled")
@@ -51,20 +60,15 @@ func main() {
 	if config.Local.Enabled {
 		slog.Info("local enabled")
 
-		contents, err := scanner_int.ListLocalBucket(context.TODO(), config.Local.Path)
-		if err != nil {
-			slog.Error(err.Error())
-		} else {
-			for _, object := range contents {
-				slog.Info("found", "key", object.Key, "size", object.Size)
-
-				// Write object to DB
-
-			}
-		}
+		wg.Go(func() {
+			scanner_int.RunScraperService(context.TODO(), config, scrapeMessages)
+		})
 	} else {
 		slog.Debug("local disabled")
 	}
+
+	wg.Wait()
+	slog.Info("stopped scraper orchestrator")
 }
 
 func newS3Client() (*s3.Client, error) {
