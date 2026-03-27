@@ -3,7 +3,7 @@ module github.com/pgcrooks/dspm-scanner
 go 1.26.1
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.41.4
+	github.com/aws/aws-sdk-go-v2 v1.41.5
 	github.com/aws/aws-sdk-go-v2/config v1.32.12
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.97.1
 	github.com/mattn/go-sqlite3 v1.14.34
