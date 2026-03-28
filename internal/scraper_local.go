@@ -43,15 +43,23 @@ func ListLocalBucket(ctx context.Context, path string) (BucketObjectBatch, error
 func RunScraperService(ctx context.Context, cfg Config, messageChan chan<- BucketObjectBatch) {
 	slog.Info("starting ScraperService")
 
-	for range 5 {
-		contents, err := ListLocalBucket(ctx, cfg.Local.Path)
-		if err != nil {
-			slog.Error(err.Error())
-		} else {
-			messageChan <- contents
+	run := true
+	for run {
+		select {
+		case <-ctx.Done():
+			slog.Info("stopping ScraperService")
+			run = false
+
+		default:
+			contents, err := ListLocalBucket(ctx, cfg.Local.Path)
+			if err != nil {
+				slog.Error(err.Error())
+			} else {
+				messageChan <- contents
+			}
 		}
 
-		time.Sleep(time.Second * 1)
+		time.Sleep(time.Second)
 	}
 
 	slog.Info("terminated ScraperService")
