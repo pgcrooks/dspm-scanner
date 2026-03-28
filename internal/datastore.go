@@ -41,15 +41,21 @@ func (ds DataStore) Close() {
 func (ds DataStore) RunDataService(ctx context.Context, messageChan <-chan BucketObjectBatch) {
 	slog.Info("starting DataService")
 
-	for range 5 {
+	run := true
+	for run {
 		select {
+		case <-ctx.Done():
+			slog.Info("stopping DataService")
+			run = false
+
 		case msg1 := <-messageChan:
 			for _, object := range msg1 {
 				slog.Info("rx scrape_data", "key", object.Key, "size", object.Size)
 			}
 		}
+
+		time.Sleep(time.Second)
 	}
-	time.Sleep(time.Second * 10)
 
 	slog.Info("terminated DataService")
 }

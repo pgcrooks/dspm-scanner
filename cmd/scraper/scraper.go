@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -25,12 +28,23 @@ func main() {
 	}
 	defer ds.Close()
 
+	// Contexts
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	// Communication channels
 	scrapeMessages := make(chan scanner_int.BucketObjectBatch, 100)
 
+	// Group all routines
 	var wg sync.WaitGroup
+
+	// Listen for system signals
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	// Run workers
 	wg.Go(func() {
-		ds.RunDataService(context.TODO(), scrapeMessages)
+		ds.RunDataService(ctx, scrapeMessages)
 	})
 
 	if config.Aws.Enabled {
@@ -61,10 +75,17 @@ func main() {
 		slog.Info("local enabled")
 
 		wg.Go(func() {
-			scanner_int.RunScraperService(context.TODO(), config, scrapeMessages)
+			scanner_int.RunScraperService(ctx, config, scrapeMessages)
 		})
 	} else {
 		slog.Debug("local disabled")
+	}
+
+	// Listen for interrupt
+	select {
+	case <-sigChan:
+		slog.Info("received shutdown signal, stopping gracefully")
+		cancel()
 	}
 
 	wg.Wait()
