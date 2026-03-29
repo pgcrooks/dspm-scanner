@@ -52,10 +52,10 @@ func main() {
 
 	// Run workers
 	wg.Go(func() {
-		ds.RunDataService(ctx, scrapeMessages)
+		ds.Run(ctx, scrapeMessages)
 	})
 
-	if config.Aws.Enabled {
+	if config.Scraper.Aws.Enabled {
 		slog.Debug("aws enabled")
 
 		client, err := newS3Client()
@@ -63,7 +63,7 @@ func main() {
 			slog.Error("unable to create AWS client", "err", err.Error())
 		} else {
 			contents, err := scanner_int.ListS3Bucket(
-				context.TODO(), client, config.Aws.BucketName,
+				context.TODO(), client, config.Scraper.Aws.BucketName,
 			)
 			if err != nil {
 				slog.Error(err.Error())
@@ -79,7 +79,7 @@ func main() {
 		slog.Debug("aws disabled")
 	}
 
-	if config.Local.Enabled {
+	if config.Scraper.Local.Enabled {
 		slog.Info("local enabled")
 
 		wg.Go(func() {
