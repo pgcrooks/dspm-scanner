@@ -8,6 +8,7 @@ import (
 	"time"
 
 	scanner_int "github.com/pgcrooks/dspm-scanner/internal"
+	finder "github.com/pgcrooks/dspm-scanner/internal/finder"
 )
 
 type DataStoreType int
@@ -35,7 +36,7 @@ type DataStoreMemory struct {
 type IDataStore interface {
 	GetName() string
 	Close()
-	Write(object scanner_int.BucketObject)
+	Write(object finder.BucketObject)
 }
 
 var dataStoreName = map[DataStoreType]string{
@@ -51,7 +52,7 @@ func (ds DataStore) GetName() string {
 	return ds.Name
 }
 
-func (ds DataStore) Write(object scanner_int.BucketObject) {
+func (ds DataStore) Write(object finder.BucketObject) {
 	slog.Error("ds write not impl")
 }
 
@@ -73,7 +74,7 @@ func (ds DataStore) Close() {
 	slog.Info("base ds close")
 }
 
-func RunDataService(ctx context.Context, ids IDataStore, messageChan <-chan scanner_int.BucketObjectBatch) {
+func RunDataService(ctx context.Context, ids IDataStore, messageChan <-chan finder.BucketObjectBatch) {
 	slog.Info("starting DataService")
 
 	run := true
