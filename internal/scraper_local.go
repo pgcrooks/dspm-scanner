@@ -9,9 +9,12 @@ import (
 	"time"
 )
 
-type LocalAPI interface {
-	ReadDir(path string) ([]os.DirEntry, error)
+type BucketObject struct {
+	Key  string
+	Size int64
 }
+
+type BucketObjectBatch []BucketObject
 
 func ListLocalBucket(ctx context.Context, path string) (BucketObjectBatch, error) {
 	files, err := os.ReadDir(path)
