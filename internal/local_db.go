@@ -11,11 +11,13 @@ import (
 
 const ARTIFACT_TABLE string = "artifacts"
 
-func InitLocalDB(dbName string) (*sql.DB, error) {
+func InitDSLocalDB(dbName string) (IDataStore, error) {
 	slog.Info("Opening", "dbName", dbName)
+	ds := DataStoreLocalDB{}
+	ds.Name = "fooDB"
 	db, err := sql.Open("sqlite3", dbName)
 	if err != nil {
-		return nil, err
+		return &ds, err
 	}
 
 	// Create table
@@ -25,11 +27,14 @@ func InitLocalDB(dbName string) (*sql.DB, error) {
 	)
 	_, err = db.Exec(sqlStmt)
 	if err != nil {
-		return nil, fmt.Errorf("can not create table. %v", err)
+		return ds, fmt.Errorf("can not create table. %v", err)
 	}
-	return db, nil
+
+	ds.SqlDB = db
+	ds.Type = LocalDB
+	return ds, nil
 }
 
-func CloseLocalDB(db *sql.DB) {
-	db.Close()
+func (ds DataStoreLocalDB) Close() {
+	ds.SqlDB.Close()
 }

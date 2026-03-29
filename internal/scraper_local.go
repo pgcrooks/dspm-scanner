@@ -51,7 +51,7 @@ func RunScraperService(ctx context.Context, cfg Config, messageChan chan<- Bucke
 			run = false
 
 		default:
-			contents, err := ListLocalBucket(ctx, cfg.Local.Path)
+			contents, err := ListLocalBucket(ctx, cfg.Scraper.Local.Path)
 			if err != nil {
 				slog.Error(err.Error())
 			} else {

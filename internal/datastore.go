@@ -12,32 +12,38 @@ type DataStoreAPI interface {
 	RunDataService()
 }
 
-func InitDataStore(ctx context.Context, config *Config) (DataStore, error) {
-	switch config.Ds.Driver {
-	case "sqlite":
-		db, err := InitLocalDB(config.Ds.Path)
-		if err != nil {
-			return DataStore{}, err
-		}
-		ds := DataStore{}
-		ds.Type = LocalDB
-		ds.LocalDB = db
-		return ds, nil
-	default:
-		return DataStore{}, fmt.Errorf("unknown ds: %s", config.Ds.Driver)
+var dataStoreName = map[DataStoreType]string{
+	LocalDB: "localdb",
+	Memory:  "memory",
+}
+
+func (dst DataStoreType) String() string {
+	return dataStoreName[dst]
+}
+
+func (ds DataStore) GetName() string {
+	return ds.Name
+}
+
+func InitDataStore(ctx context.Context, config *Config) (IDataStore, error) {
+	// Config validator will ensure only one DS is enabled
+	if config.DataStore.LocalDB.Enabled {
+		ds, err := InitDSLocalDB(config.DataStore.LocalDB.Path)
+		return ds, err
+	} else if config.DataStore.Memory.Enabled {
+		ds, err := InitDSMemory()
+		return ds, err
+	} else {
+		return DataStore{}, fmt.Errorf("ds not implemented")
 	}
 }
 
 func (ds DataStore) Close() {
-	switch ds.Type {
-	case LocalDB:
-		CloseLocalDB(ds.LocalDB)
-	default:
-		// No-op
-	}
+	// Useless wrapper for now
+	ds.Close()
 }
 
-func (ds DataStore) RunDataService(ctx context.Context, messageChan <-chan BucketObjectBatch) {
+func (ds DataStore) Run(ctx context.Context, messageChan <-chan BucketObjectBatch) {
 	slog.Info("starting DataService")
 
 	run := true
