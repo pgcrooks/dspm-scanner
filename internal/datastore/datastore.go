@@ -1,4 +1,4 @@
-package scanner_int
+package datastore
 
 import (
 	"context"
@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 	"time"
+
+	scanner_int "github.com/pgcrooks/dspm-scanner/internal"
 )
 
 type DataStoreType int
@@ -33,12 +35,11 @@ type DataStoreMemory struct {
 type IDataStore interface {
 	GetName() string
 	Close()
-	Run(ctx context.Context, messageChan <-chan BucketObjectBatch)
+	Run(ctx context.Context, messageChan <-chan scanner_int.BucketObjectBatch)
 }
 
 type DataStoreAPI interface {
 	Close()
-	RunDataService()
 }
 
 var dataStoreName = map[DataStoreType]string{
@@ -54,7 +55,7 @@ func (ds DataStore) GetName() string {
 	return ds.Name
 }
 
-func InitDataStore(ctx context.Context, config *Config) (IDataStore, error) {
+func InitDataStore(ctx context.Context, config *scanner_int.Config) (IDataStore, error) {
 	// Config validator will ensure only one DS is enabled
 	if config.DataStore.LocalDB.Enabled {
 		ds, err := InitDSLocalDB(config.DataStore.LocalDB.Path)
@@ -72,7 +73,7 @@ func (ds DataStore) Close() {
 	ds.Close()
 }
 
-func (ds DataStore) Run(ctx context.Context, messageChan <-chan BucketObjectBatch) {
+func (ds DataStore) Run(ctx context.Context, messageChan <-chan scanner_int.BucketObjectBatch) {
 	slog.Info("starting DataService")
 
 	run := true
