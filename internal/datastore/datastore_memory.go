@@ -1,4 +1,4 @@
-package scanner_int
+package datastore
 
 import "log/slog"
 

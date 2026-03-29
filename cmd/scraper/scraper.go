@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	scanner_int "github.com/pgcrooks/dspm-scanner/internal"
+	datastore "github.com/pgcrooks/dspm-scanner/internal/datastore"
 )
 
 func main() {
@@ -27,7 +28,7 @@ func main() {
 	defer cancel()
 
 	// DataStore
-	ds, err := scanner_int.InitDataStore(ctx, &config)
+	ds, err := datastore.InitDataStore(ctx, &config)
 	if err != nil {
 		panic(fmt.Errorf("cannot init ds: %w", err))
 	}
