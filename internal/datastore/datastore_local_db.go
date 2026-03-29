@@ -1,6 +1,7 @@
 package datastore
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
@@ -11,7 +12,7 @@ import (
 
 const ARTIFACT_TABLE string = "artifacts"
 
-func InitDSLocalDB(dbName string) (IDataStore, error) {
+func initDSLocalDB(ctx context.Context, dbName string) (IDataStore, error) {
 	slog.Info("Opening", "dbName", dbName)
 	ds := DataStoreLocalDB{}
 	ds.Name = "fooDB"
