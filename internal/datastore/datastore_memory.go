@@ -4,7 +4,7 @@ import (
 	"context"
 	"log/slog"
 
-	scanner_int "github.com/pgcrooks/dspm-scanner/internal"
+	finder "github.com/pgcrooks/dspm-scanner/internal/finder"
 )
 
 func InitDSMemory(ctx context.Context) (IDataStore, error) {
@@ -18,6 +18,6 @@ func (ds DataStoreMemory) Close() {
 	slog.Info("ds memory close")
 }
 
-func (ds DataStoreMemory) Write(object scanner_int.BucketObject) {
+func (ds DataStoreMemory) Write(object finder.BucketObject) {
 	slog.Info("ds memory write", "key", object.Key, "size", object.Size)
 }

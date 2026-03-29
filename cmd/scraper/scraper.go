@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	scanner_int "github.com/pgcrooks/dspm-scanner/internal"
 	datastore "github.com/pgcrooks/dspm-scanner/internal/datastore"
+	finder "github.com/pgcrooks/dspm-scanner/internal/finder"
 )
 
 func main() {
@@ -35,7 +36,7 @@ func main() {
 	defer ds.Close()
 
 	// Communication channels
-	scrapeChan := make(chan scanner_int.BucketObjectBatch, 100)
+	scrapeChan := make(chan finder.BucketObjectBatch, 100)
 
 	// Group all routines
 	wg := sync.WaitGroup{}
@@ -63,7 +64,7 @@ func main() {
 		if err != nil {
 			slog.Error("unable to create AWS client", "err", err.Error())
 		} else {
-			contents, err := scanner_int.ListS3Bucket(
+			contents, err := finder.ListS3Bucket(
 				context.TODO(), client, config.Scraper.Aws.BucketName,
 			)
 			if err != nil {
@@ -84,7 +85,7 @@ func main() {
 		slog.Info("local enabled")
 
 		wg.Go(func() {
-			scanner_int.RunScraperService(ctx, config, scrapeChan)
+			finder.RunFinderService(ctx, config, scrapeChan)
 		})
 	} else {
 		slog.Debug("local disabled")

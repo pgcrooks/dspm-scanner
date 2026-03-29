@@ -1,4 +1,4 @@
-package scanner_int
+package finder
 
 import (
 	"context"
