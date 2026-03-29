@@ -12,20 +12,19 @@ type DataStoreAPI interface {
 	RunDataService()
 }
 
-func InitDataStore(ctx context.Context, dsType DataStoreType) (DataStore, error) {
-	switch dsType {
-	case LocalDB:
-		// TODO: hardcoded until Config module exists
-		localDB, err := InitLocalDB("dspm.db")
+func InitDataStore(ctx context.Context, config *Config) (DataStore, error) {
+	switch config.Ds.Driver {
+	case "sqlite":
+		db, err := InitLocalDB(config.Ds.Path)
 		if err != nil {
 			return DataStore{}, err
 		}
-		var ds DataStore
+		ds := DataStore{}
 		ds.Type = LocalDB
-		ds.LocalDB = localDB
+		ds.LocalDB = db
 		return ds, nil
 	default:
-		return DataStore{}, fmt.Errorf("unknown ds: %d", dsType)
+		return DataStore{}, fmt.Errorf("unknown ds: %s", config.Ds.Driver)
 	}
 }
 
