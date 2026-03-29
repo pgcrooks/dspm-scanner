@@ -36,11 +36,18 @@ func main() {
 	scrapeMessages := make(chan scanner_int.BucketObjectBatch, 100)
 
 	// Group all routines
-	var wg sync.WaitGroup
+	wg := sync.WaitGroup{}
 
-	// Listen for system signals
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	// Handle shutdown signals
+	go func() {
+		interruptChan := make(chan os.Signal, 1)
+		signal.Notify(interruptChan, os.Interrupt, syscall.SIGTERM)
+		<-interruptChan
+
+		slog.Info("received shutdown signal, stopping gracefully")
+
+		cancel()
+	}()
 
 	// Run workers
 	wg.Go(func() {
@@ -81,13 +88,7 @@ func main() {
 		slog.Debug("local disabled")
 	}
 
-	// Listen for interrupt
-	select {
-	case <-sigChan:
-		slog.Info("received shutdown signal, stopping gracefully")
-		cancel()
-	}
-
+	// Run until everything cleans up
 	wg.Wait()
 	slog.Info("stopped scraper orchestrator")
 }
