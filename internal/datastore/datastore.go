@@ -18,6 +18,7 @@ const (
 )
 
 type DataStore struct {
+	ctx  context.Context
 	Name string
 	Type DataStoreType
 }
@@ -35,11 +36,7 @@ type DataStoreMemory struct {
 type IDataStore interface {
 	GetName() string
 	Close()
-	Run(ctx context.Context, messageChan <-chan scanner_int.BucketObjectBatch)
-}
-
-type DataStoreAPI interface {
-	Close()
+	Write(object scanner_int.BucketObject)
 }
 
 var dataStoreName = map[DataStoreType]string{
@@ -55,13 +52,17 @@ func (ds DataStore) GetName() string {
 	return ds.Name
 }
 
+func (ds DataStore) Write(object scanner_int.BucketObject) {
+	slog.Error("ds write not impl")
+}
+
 func InitDataStore(ctx context.Context, config *scanner_int.Config) (IDataStore, error) {
 	// Config validator will ensure only one DS is enabled
 	if config.DataStore.LocalDB.Enabled {
-		ds, err := InitDSLocalDB(config.DataStore.LocalDB.Path)
+		ds, err := initDSLocalDB(ctx, config.DataStore.LocalDB.Path)
 		return ds, err
 	} else if config.DataStore.Memory.Enabled {
-		ds, err := InitDSMemory()
+		ds, err := InitDSMemory(ctx)
 		return ds, err
 	} else {
 		return DataStore{}, fmt.Errorf("ds not implemented")
@@ -69,11 +70,11 @@ func InitDataStore(ctx context.Context, config *scanner_int.Config) (IDataStore,
 }
 
 func (ds DataStore) Close() {
-	// Useless wrapper for now
-	ds.Close()
+	// Can be overridden by child impls
+	slog.Info("base ds close")
 }
 
-func (ds DataStore) Run(ctx context.Context, messageChan <-chan scanner_int.BucketObjectBatch) {
+func RunDataService(ctx context.Context, ids IDataStore, messageChan <-chan scanner_int.BucketObjectBatch) {
 	slog.Info("starting DataService")
 
 	run := true
@@ -86,6 +87,7 @@ func (ds DataStore) Run(ctx context.Context, messageChan <-chan scanner_int.Buck
 		case msg1 := <-messageChan:
 			for _, object := range msg1 {
 				slog.Info("rx scrape_data", "key", object.Key, "size", object.Size)
+				ids.Write(object)
 			}
 		}
 

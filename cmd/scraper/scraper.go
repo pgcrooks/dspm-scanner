@@ -35,7 +35,7 @@ func main() {
 	defer ds.Close()
 
 	// Communication channels
-	scrapeMessages := make(chan scanner_int.BucketObjectBatch, 100)
+	scrapeChan := make(chan scanner_int.BucketObjectBatch, 100)
 
 	// Group all routines
 	wg := sync.WaitGroup{}
@@ -53,7 +53,7 @@ func main() {
 
 	// Run workers
 	wg.Go(func() {
-		ds.Run(ctx, scrapeMessages)
+		datastore.RunDataService(ctx, ds, scrapeChan)
 	})
 
 	if config.Scraper.Aws.Enabled {
@@ -84,7 +84,7 @@ func main() {
 		slog.Info("local enabled")
 
 		wg.Go(func() {
-			scanner_int.RunScraperService(ctx, config, scrapeMessages)
+			scanner_int.RunScraperService(ctx, config, scrapeChan)
 		})
 	} else {
 		slog.Debug("local disabled")
