@@ -22,15 +22,16 @@ func main() {
 		panic(fmt.Errorf("fatal error config file: %w", err))
 	}
 
-	ds, err := scanner_int.InitDataStore(context.TODO(), scanner_int.LocalDB)
+	// Contexts
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// DataStore
+	ds, err := scanner_int.InitDataStore(ctx, &config)
 	if err != nil {
 		panic(fmt.Errorf("cannot init ds: %w", err))
 	}
 	defer ds.Close()
-
-	// Contexts
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	// Communication channels
 	scrapeMessages := make(chan scanner_int.BucketObjectBatch, 100)

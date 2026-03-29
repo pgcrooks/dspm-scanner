@@ -14,7 +14,7 @@ type Config struct {
 		Enabled    bool
 		BucketName string
 	}
-	Db struct {
+	Ds struct {
 		Driver string
 		Path   string
 	}
