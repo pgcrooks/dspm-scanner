@@ -18,7 +18,6 @@ const (
 )
 
 type DataStore struct {
-	ctx  context.Context
 	Name string
 	Type DataStoreType
 }

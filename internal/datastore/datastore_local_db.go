@@ -37,5 +37,8 @@ func initDSLocalDB(ctx context.Context, dbName string) (IDataStore, error) {
 }
 
 func (ds DataStoreLocalDB) Close() {
-	ds.SqlDB.Close()
+	err := ds.SqlDB.Close()
+	if err != nil {
+		slog.Error("unable to close db", "err", err)
+	}
 }
