@@ -13,10 +13,11 @@ type finderLocal struct {
 	Path string
 }
 
-func newFinderLocal(path string) (IFinder, error) {
+func newFinderLocal(path string, bucketChan chan<- BucketObjectBatch) (IFinder, error) {
 	return &finderLocal{
 		Finder: Finder{
-			Name: "local",
+			Name:       "local",
+			BucketChan: bucketChan,
 		},
 		Path: path,
 	}, nil
@@ -35,6 +36,7 @@ func (f finderLocal) Run(ctx context.Context) {
 		default:
 			files, err := os.ReadDir(f.Path)
 			if err == nil {
+				var contents BucketObjectBatch
 				for _, file := range files {
 					// Ignore directories
 					if !file.IsDir() {
@@ -50,9 +52,10 @@ func (f finderLocal) Run(ctx context.Context) {
 							Size: fileSize,
 						}
 						slog.Info("found metadata", "file", obj)
-						//todo write to channel
+						contents = append(contents, obj)
 					}
 				}
+				f.BucketChan <- contents
 			} else {
 				slog.Warn("cannot read path", "err", err.Error())
 			}

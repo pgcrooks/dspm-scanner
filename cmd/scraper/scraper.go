@@ -50,7 +50,7 @@ func main() {
 		cancel()
 	}()
 
-	finderService, err := finder.InitFinderService(ctx, &config)
+	finderService, err := finder.InitFinderService(ctx, &config, scrapeChan)
 	if err != nil {
 		panic(fmt.Errorf("cannot init finder service: %w", err))
 	}
@@ -60,7 +60,7 @@ func main() {
 		datastore.RunDataService(ctx, ds, scrapeChan)
 	})
 	wg.Go(func() {
-		finderService.Run(ctx, scrapeChan)
+		finderService.Run(ctx)
 	})
 
 	// Run until everything cleans up

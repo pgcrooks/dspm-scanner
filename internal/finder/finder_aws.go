@@ -16,7 +16,7 @@ type finderAWSS3 struct {
 	BucketName string
 }
 
-func newFinderAWSS3(ctx context.Context, bucketName string) (IFinder, error) {
+func newFinderAWSS3(ctx context.Context, bucketName string, bucketChan chan<- BucketObjectBatch) (IFinder, error) {
 	// Load the Shared AWS Configuration (~/.aws/config)
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
@@ -27,7 +27,8 @@ func newFinderAWSS3(ctx context.Context, bucketName string) (IFinder, error) {
 
 	return &finderAWSS3{
 		Finder: Finder{
-			Name: "aws_s3",
+			Name:       "aws_s3",
+			BucketChan: bucketChan,
 		},
 		Client:     client,
 		BucketName: bucketName,
