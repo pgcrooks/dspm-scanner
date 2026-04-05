@@ -98,7 +98,7 @@ func TestListS3ucket(t *testing.T) {
 	for i, tt := range cases {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			ctx := context.TODO()
-			content, err := ListS3Bucket(ctx, tt.client(t), tt.bucket)
+			content, err := listS3Bucket(ctx, tt.client(t), tt.bucket)
 			if err != nil {
 				t.Fatalf("expect no error, got %v", err)
 			}

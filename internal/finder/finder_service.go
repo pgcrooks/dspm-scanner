@@ -2,64 +2,117 @@ package finder
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
-	"time"
+	"sync"
 
 	scanner_int "github.com/pgcrooks/dspm-scanner/internal"
 )
 
+type FinderType int
+
+const (
+	LocalFS FinderType = iota
+	AWSS3
+)
+
+var finderTypeName = map[FinderType]string{
+	LocalFS: "local_fs",
+	AWSS3:   "aws_s3",
+}
+
+func (ft FinderType) String() string {
+	return finderTypeName[ft]
+}
+
+// Idividual Finder for a certain data source (Local, AWS S3...)
+type IFinder interface {
+	Run(ctx context.Context)
+}
+
+// Finder Service which owns many Finders
+type FinderService struct {
+	Finders []IFinder
+}
+
+// Finder Service interface
+type IFinderService interface {
+	Run(ctx context.Context, messageChan chan<- BucketObjectBatch)
+}
+
+// Finder base class
+type Finder struct {
+	Name string
+}
+
+// Individual data object's metadata
 type BucketObject struct {
 	Key  string
 	Size int64
 }
 
+// Batch of data object metadata
 type BucketObjectBatch []BucketObject
 
-type IFinderService interface {
-	Run()
-}
+func InitFinderService(ctx context.Context, config *scanner_int.Config) (IFinderService, error) {
+	slog.Info("init finder service")
 
-type IFinderImpl interface {
-	Run()
-}
-
-type FinderLocal struct {
-}
-
-type FinderService struct {
-	Local FinderLocal
-}
-
-// func InitFinderService(ctx context.Context, config *scanner_int.Config) (IFinderService, error) {
-// 	slog.Info("init finder service")
-// 	finderService := IFinderService{}
-// 	if config.Scraper.Local.Enabled {
-// 		slog.Info("finder local enabled")
-// 	}
-// 	return
-// }
-
-func RunFinderService(ctx context.Context, cfg scanner_int.Config, messageChan chan<- BucketObjectBatch) {
-	slog.Info("starting FinderService")
-
-	run := true
-	for run {
-		select {
-		case <-ctx.Done():
-			slog.Info("stopping FinderService")
-			run = false
-
-		default:
-			contents, err := listLocalBucket(ctx, cfg.Scraper.Local.Path)
-			if err != nil {
-				slog.Error(err.Error())
-			} else {
-				messageChan <- contents
-			}
-		}
-
-		time.Sleep(time.Second)
+	// Error checking
+	if !config.Scraper.Aws.Enabled && !config.Scraper.Local.Enabled {
+		return nil, fmt.Errorf("no finders enabled")
 	}
 
-	slog.Info("terminated ScraperService")
+	// Spin up each finder
+	iface := FinderService{}
+
+	if config.Scraper.Aws.Enabled {
+		slog.Info("finder enabled: aws")
+		finder, err := newFinderAWSS3(ctx, config.Scraper.Aws.BucketName)
+		if err != nil {
+			slog.Warn("cannot create aws s3 finder", "err", err.Error())
+		} else {
+			iface.Finders = append(iface.Finders, finder)
+		}
+	}
+
+	if config.Scraper.Local.Enabled {
+		slog.Info("finder enabled: local")
+		finder, err := newFinderLocal(config.Scraper.Local.Path)
+		if err != nil {
+			slog.Warn("cannot create local finder", "err", err.Error())
+		} else {
+			iface.Finders = append(iface.Finders, finder)
+		}
+	}
+
+	slog.Info("finder service initialised", "numFinders", len(iface.Finders))
+	return iface, nil
+}
+
+func (fs FinderService) Run(ctx context.Context, messageChan chan<- BucketObjectBatch) {
+	slog.Info("running FinderService")
+
+	// Wait group for all the individual finders
+	wg := sync.WaitGroup{}
+
+	// New context for finders
+	finderCtx, finderCancel := context.WithCancel(ctx)
+	defer finderCancel()
+
+	// Handle stop signal
+	go func() {
+		<-ctx.Done()
+		slog.Info("stopping FinderService")
+		finderCancel()
+	}()
+
+	// Run the finders
+	for _, f := range fs.Finders {
+		wg.Go(func() {
+			f.Run(finderCtx)
+		})
+	}
+
+	wg.Wait()
+	slog.Info("stopped FinderService")
 }
