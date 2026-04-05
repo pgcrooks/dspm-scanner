@@ -9,6 +9,15 @@ import (
 	scanner_int "github.com/pgcrooks/dspm-scanner/internal"
 )
 
+// Individual data object's metadata
+type BucketObject struct {
+	Key  string
+	Size int64
+}
+
+// Batch of data object metadata
+type BucketObjectBatch []BucketObject
+
 type FinderType int
 
 const (
@@ -37,24 +46,20 @@ type FinderService struct {
 
 // Finder Service interface
 type IFinderService interface {
-	Run(ctx context.Context, messageChan chan<- BucketObjectBatch)
+	Run(ctx context.Context)
 }
 
 // Finder base class
 type Finder struct {
-	Name string
+	Name       string
+	BucketChan chan<- BucketObjectBatch
 }
 
-// Individual data object's metadata
-type BucketObject struct {
-	Key  string
-	Size int64
-}
-
-// Batch of data object metadata
-type BucketObjectBatch []BucketObject
-
-func InitFinderService(ctx context.Context, config *scanner_int.Config) (IFinderService, error) {
+func InitFinderService(
+	ctx context.Context,
+	config *scanner_int.Config,
+	bucketChan chan<- BucketObjectBatch,
+) (IFinderService, error) {
 	slog.Info("init finder service")
 
 	// Error checking
@@ -63,33 +68,33 @@ func InitFinderService(ctx context.Context, config *scanner_int.Config) (IFinder
 	}
 
 	// Spin up each finder
-	iface := FinderService{}
+	service := FinderService{}
 
 	if config.Scraper.Aws.Enabled {
 		slog.Info("finder enabled: aws")
-		finder, err := newFinderAWSS3(ctx, config.Scraper.Aws.BucketName)
+		finder, err := newFinderAWSS3(ctx, config.Scraper.Aws.BucketName, bucketChan)
 		if err != nil {
 			slog.Warn("cannot create aws s3 finder", "err", err.Error())
 		} else {
-			iface.Finders = append(iface.Finders, finder)
+			service.Finders = append(service.Finders, finder)
 		}
 	}
 
 	if config.Scraper.Local.Enabled {
 		slog.Info("finder enabled: local")
-		finder, err := newFinderLocal(config.Scraper.Local.Path)
+		finder, err := newFinderLocal(config.Scraper.Local.Path, bucketChan)
 		if err != nil {
 			slog.Warn("cannot create local finder", "err", err.Error())
 		} else {
-			iface.Finders = append(iface.Finders, finder)
+			service.Finders = append(service.Finders, finder)
 		}
 	}
 
-	slog.Info("finder service initialised", "numFinders", len(iface.Finders))
-	return iface, nil
+	slog.Info("finder service initialised", "numFinders", len(service.Finders))
+	return service, nil
 }
 
-func (fs FinderService) Run(ctx context.Context, messageChan chan<- BucketObjectBatch) {
+func (fs FinderService) Run(ctx context.Context) {
 	slog.Info("running FinderService")
 
 	// Wait group for all the individual finders
