@@ -63,16 +63,16 @@ func InitFinderService(
 	slog.Info("init finder service")
 
 	// Error checking
-	if !config.Scraper.Aws.Enabled && !config.Scraper.Local.Enabled {
+	if !config.Finder.Aws.Enabled && !config.Finder.Local.Enabled {
 		return nil, fmt.Errorf("no finders enabled")
 	}
 
 	// Spin up each finder
 	service := FinderService{}
 
-	if config.Scraper.Aws.Enabled {
+	if config.Finder.Aws.Enabled {
 		slog.Info("finder enabled: aws")
-		finder, err := newFinderAWSS3(ctx, config.Scraper.Aws.BucketName, bucketChan)
+		finder, err := newFinderAWSS3(ctx, config.Finder.Aws.BucketName, bucketChan)
 		if err != nil {
 			slog.Warn("cannot create aws s3 finder", "err", err.Error())
 		} else {
@@ -80,9 +80,9 @@ func InitFinderService(
 		}
 	}
 
-	if config.Scraper.Local.Enabled {
+	if config.Finder.Local.Enabled {
 		slog.Info("finder enabled: local")
-		finder, err := newFinderLocal(config.Scraper.Local.Path, bucketChan)
+		finder, err := newFinderLocal(config.Finder.Local.Path, bucketChan)
 		if err != nil {
 			slog.Warn("cannot create local finder", "err", err.Error())
 		} else {

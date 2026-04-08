@@ -20,12 +20,12 @@ func TestConfigGood(t *testing.T) {
 				Enabled: true,
 			},
 		},
-		Scraper: ScraperConfig{
-			Aws: scraperAWSConfig{
+		Finder: FinderConfig{
+			Aws: finderAWSConfig{
 				Enabled:    false,
 				BucketName: "pgcrooks-dspm",
 			},
-			Local: scraperLocalConfig{
+			Local: finderLocalConfig{
 				Enabled: true,
 				Path:    "test/data/",
 			},
