@@ -11,3 +11,5 @@ finder:
   local:
     enabled: true
     path: "/home/pgcrooks/dev/dspm-scanner/test/data/"
+scanner:
+  instances: 1

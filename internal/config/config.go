@@ -35,9 +35,14 @@ type FinderConfig struct {
 	Local finderLocalConfig
 }
 
+type ScannerConfig struct {
+	Instances int
+}
+
 type Config struct {
 	DataStore DataStoreConfig
 	Finder    FinderConfig
+	Scanner   ScannerConfig
 }
 
 func GetConfig(configFile string, configPath string) (Config, error) {
