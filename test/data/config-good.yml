@@ -4,7 +4,7 @@ datastore:
     path: "dspm.db"
   memory:
     enabled: true
-scraper:
+finder:
   aws:
     enabled: false
     bucket_name: "pgcrooks-dspm"

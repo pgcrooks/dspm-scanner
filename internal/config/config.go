@@ -20,24 +20,24 @@ type DataStoreConfig struct {
 	Memory  dataStoreMemoryConfig
 }
 
-type scraperAWSConfig struct {
+type finderAWSConfig struct {
 	Enabled    bool
 	BucketName string `mapstructure:"bucket_name"`
 }
 
-type scraperLocalConfig struct {
+type finderLocalConfig struct {
 	Enabled bool
 	Path    string `mapstructure:"path"`
 }
 
-type ScraperConfig struct {
-	Aws   scraperAWSConfig
-	Local scraperLocalConfig
+type FinderConfig struct {
+	Aws   finderAWSConfig
+	Local finderLocalConfig
 }
 
 type Config struct {
 	DataStore DataStoreConfig
-	Scraper   ScraperConfig
+	Finder    FinderConfig
 }
 
 func GetConfig(configFile string, configPath string) (Config, error) {
