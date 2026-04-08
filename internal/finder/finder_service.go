@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"sync"
 
-	scanner_int "github.com/pgcrooks/dspm-scanner/internal"
+	dspm_config "github.com/pgcrooks/dspm-scanner/internal/config"
 )
 
 // Individual data object's metadata
@@ -57,7 +57,7 @@ type Finder struct {
 
 func InitFinderService(
 	ctx context.Context,
-	config *scanner_int.Config,
+	config *dspm_config.Config,
 	bucketChan chan<- BucketObjectBatch,
 ) (IFinderService, error) {
 	slog.Info("init finder service")

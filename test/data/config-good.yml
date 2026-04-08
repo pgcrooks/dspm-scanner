@@ -1,0 +1,13 @@
+datastore:
+  local_db:
+    enabled: false
+    path: "dspm.db"
+  memory:
+    enabled: true
+scraper:
+  aws:
+    enabled: false
+    bucket_name: "pgcrooks-dspm"
+  local:
+    enabled: true
+    path: "test/data/"
