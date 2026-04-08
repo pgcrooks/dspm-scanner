@@ -10,8 +10,9 @@ import (
 	"syscall"
 
 	dspm_config "github.com/pgcrooks/dspm-scanner/internal/config"
-	datastore "github.com/pgcrooks/dspm-scanner/internal/datastore"
-	finder "github.com/pgcrooks/dspm-scanner/internal/finder"
+	"github.com/pgcrooks/dspm-scanner/internal/datastore"
+	"github.com/pgcrooks/dspm-scanner/internal/finder"
+	"github.com/pgcrooks/dspm-scanner/internal/scanner"
 )
 
 func main() {
@@ -34,7 +35,8 @@ func main() {
 	defer ds.Close()
 
 	// Communication channels
-	scrapeChan := make(chan finder.BucketObjectBatch, 100)
+	finderChan := make(chan finder.BucketObjectBatch, 100)    // finder -> datastore
+	dataStoreChan := make(chan finder.BucketObjectBatch, 100) // datastore -> scanner
 
 	// Group all routines
 	wg := sync.WaitGroup{}
@@ -50,17 +52,25 @@ func main() {
 		cancel()
 	}()
 
-	finderService, err := finder.InitFinderService(ctx, &config, scrapeChan)
+	finderService, err := finder.InitFinderService(ctx, &config, finderChan)
 	if err != nil {
 		panic(fmt.Errorf("cannot init finder service: %w", err))
 	}
 
+	scannerService, err := scanner.InitScannerService(ctx, &config, dataStoreChan)
+	if err != nil {
+		panic(fmt.Errorf("cannot init scanner service: %w", err))
+	}
+
 	// Run workers
 	wg.Go(func() {
-		datastore.RunDataService(ctx, ds, scrapeChan)
+		datastore.RunDataService(ctx, ds, finderChan)
 	})
 	wg.Go(func() {
 		finderService.Run(ctx)
+	})
+	wg.Go(func() {
+		scannerService.Run(ctx)
 	})
 
 	// Run until everything cleans up
