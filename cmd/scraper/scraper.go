@@ -9,7 +9,7 @@ import (
 	"sync"
 	"syscall"
 
-	scanner_int "github.com/pgcrooks/dspm-scanner/internal"
+	dspm_config "github.com/pgcrooks/dspm-scanner/internal/config"
 	datastore "github.com/pgcrooks/dspm-scanner/internal/datastore"
 	finder "github.com/pgcrooks/dspm-scanner/internal/finder"
 )
@@ -17,7 +17,7 @@ import (
 func main() {
 	slog.Info("starting scraper orchestrator")
 
-	config, err := scanner_int.GetConfig()
+	config, err := dspm_config.GetConfig("config", "./")
 	if err != nil {
 		panic(fmt.Errorf("fatal error config file: %w", err))
 	}

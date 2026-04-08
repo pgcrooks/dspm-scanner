@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"time"
 
-	scanner_int "github.com/pgcrooks/dspm-scanner/internal"
+	dspm_config "github.com/pgcrooks/dspm-scanner/internal/config"
 	finder "github.com/pgcrooks/dspm-scanner/internal/finder"
 )
 
@@ -56,7 +56,7 @@ func (ds DataStore) Write(object finder.BucketObject) {
 	slog.Error("ds write not impl")
 }
 
-func InitDataStore(ctx context.Context, config *scanner_int.Config) (IDataStore, error) {
+func InitDataStore(ctx context.Context, config *dspm_config.Config) (IDataStore, error) {
 	// Config validator will ensure only one DS is enabled
 	if config.DataStore.LocalDB.Enabled {
 		ds, err := initDSLocalDB(ctx, config.DataStore.LocalDB.Path)
