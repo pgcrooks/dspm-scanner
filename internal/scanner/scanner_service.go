@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
-	"time"
 
 	dspm_config "github.com/pgcrooks/dspm-scanner/internal/config"
 	"github.com/pgcrooks/dspm-scanner/internal/finder"
@@ -28,7 +27,7 @@ func (st ScannerType) String() string {
 // Scanner Service owns many Scanners
 type ScannerService struct {
 	Instances int
-	Scanners  []Scanner
+	Scanners  []IScanner
 }
 
 type IScannerService interface {
@@ -38,6 +37,7 @@ type IScannerService interface {
 // Scanner base class
 type Scanner struct {
 	Name     string
+	Mode     ScannerType
 	DataChan <-chan finder.BucketObjectBatch
 }
 
@@ -48,7 +48,7 @@ type IScanner interface {
 func InitScannerService(
 	ctx context.Context,
 	config *dspm_config.Config,
-	bucketChan chan<- finder.BucketObjectBatch,
+	bucketChan <-chan finder.BucketObjectBatch,
 ) (IScannerService, error) {
 	slog.Info("init scanner service")
 
@@ -64,28 +64,15 @@ func InitScannerService(
 
 	if config.Scanner.Regex.Enabled {
 		slog.Info("scanner enabled: regex")
+		scanner, err := newScannerRegex(bucketChan)
+		if err != nil {
+			slog.Warn("cannot create scanner regex", "err", err.Error())
+		} else {
+			service.Scanners = append(service.Scanners, scanner)
+		}
 	}
 
 	return service, nil
-}
-
-func runScanner(ctx context.Context, id int) {
-	slog.Info("run scanner instance", "id", id)
-
-	run := true
-	for run {
-		select {
-		case <-ctx.Done():
-			slog.Info("stopping scanner", "id", id)
-			run = false
-
-		default:
-			//todo
-		}
-
-		time.Sleep(time.Second)
-	}
-	slog.Info("stopped scanner instance", "id", id)
 }
 
 func (ss ScannerService) Run(ctx context.Context) {
@@ -106,9 +93,9 @@ func (ss ScannerService) Run(ctx context.Context) {
 	}()
 
 	// Run the scanners
-	for i := range ss.Instances {
+	for _, s := range ss.Scanners {
 		wg.Go(func() {
-			runScanner(scannerCtx, i)
+			s.Run(scannerCtx)
 		})
 	}
 
