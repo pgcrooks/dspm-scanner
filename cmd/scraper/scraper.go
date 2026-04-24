@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"path"
 	"sync"
 	"syscall"
 
@@ -16,6 +17,19 @@ import (
 )
 
 func main() {
+	handlerOpts := slog.HandlerOptions{
+		AddSource: true,
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			if a.Key == slog.SourceKey {
+				s := a.Value.Any().(*slog.Source)
+				s.File = path.Base(s.File)
+			}
+			return a
+		},
+	}
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &handlerOpts))
+	slog.SetDefault(logger)
+
 	slog.Info("starting scraper orchestrator")
 
 	config, err := dspm_config.GetConfig("config", "./")
