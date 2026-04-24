@@ -2,6 +2,7 @@ package scanner
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -10,11 +11,37 @@ import (
 	"github.com/pgcrooks/dspm-scanner/internal/finder"
 )
 
+type ScannerType int
+
+const (
+	Regex ScannerType = iota
+)
+
+var scannerTypeName = map[ScannerType]string{
+	Regex: "regex",
+}
+
+func (st ScannerType) String() string {
+	return scannerTypeName[st]
+}
+
+// Scanner Service owns many Scanners
 type ScannerService struct {
 	Instances int
+	Scanners  []Scanner
 }
 
 type IScannerService interface {
+	Run(ctx context.Context)
+}
+
+// Scanner base class
+type Scanner struct {
+	Name     string
+	DataChan <-chan finder.BucketObjectBatch
+}
+
+type IScanner interface {
 	Run(ctx context.Context)
 }
 
@@ -25,8 +52,18 @@ func InitScannerService(
 ) (IScannerService, error) {
 	slog.Info("init scanner service")
 
+	// Error checking
+	if !config.Scanner.Regex.Enabled {
+		return nil, fmt.Errorf("no scanners enabled")
+	}
+
+	// Spin up each scanner
 	service := ScannerService{
 		Instances: config.Scanner.Instances,
+	}
+
+	if config.Scanner.Regex.Enabled {
+		slog.Info("scanner enabled: regex")
 	}
 
 	return service, nil
