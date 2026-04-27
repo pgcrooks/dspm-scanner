@@ -35,9 +35,19 @@ type FinderConfig struct {
 	Local finderLocalConfig
 }
 
+type ScannerRegexConfig struct {
+	Enabled bool
+}
+
+type ScannerConfig struct {
+	Instances int
+	Regex     ScannerRegexConfig
+}
+
 type Config struct {
 	DataStore DataStoreConfig
 	Finder    FinderConfig
+	Scanner   ScannerConfig
 }
 
 func GetConfig(configFile string, configPath string) (Config, error) {
