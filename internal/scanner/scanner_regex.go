@@ -9,9 +9,23 @@ import (
 	"github.com/pgcrooks/dspm-scanner/internal/finder"
 )
 
+type matcher struct {
+	Name    string
+	Pattern string
+	Regex   *regexp.Regexp
+}
+
 type scannerRegex struct {
 	Scanner
-	Checks []*regexp.Regexp
+	Matchers []matcher
+}
+
+func getDefaultMatchers() []matcher {
+	return []matcher{
+		{Name: "password", Pattern: "(?i)password[:= ]"},
+		{Name: "key", Pattern: "(?i)key[:= ]"},
+		{Name: "token", Pattern: "(?i)token[:= ]"},
+	}
 }
 
 func newScannerRegex(bucketChan <-chan finder.BucketObjectBatch) (IScanner, error) {
@@ -23,11 +37,14 @@ func newScannerRegex(bucketChan <-chan finder.BucketObjectBatch) (IScanner, erro
 		},
 	}
 
-	r, err := regexp.Compile("(?i)password[:= ]")
-	if err != nil {
-		slog.Error("unable to compile regex", "err", err.Error())
-	} else {
-		scanner.Checks = append(scanner.Checks, r)
+	for _, matcher := range getDefaultMatchers() {
+		r, err := regexp.Compile(matcher.Pattern)
+		if err != nil {
+			slog.Error("unable to compile regex", "err", err.Error())
+		} else {
+			matcher.Regex = r
+			scanner.Matchers = append(scanner.Matchers, matcher)
+		}
 	}
 
 	return &scanner, nil
