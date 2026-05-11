@@ -2,10 +2,9 @@ package datastore
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log/slog"
-	"time"
+	"sync"
 
 	dspm_config "github.com/pgcrooks/dspm-scanner/internal/config"
 	finder "github.com/pgcrooks/dspm-scanner/internal/finder"
@@ -18,27 +17,6 @@ const (
 	Memory
 )
 
-type DataStore struct {
-	Name string
-	Type DataStoreType
-}
-
-type DataStoreLocalDB struct {
-	DataStore
-	SqlDB *sql.DB
-}
-
-type DataStoreMemory struct {
-	DataStore
-	// Actual store lives here
-}
-
-type IDataStore interface {
-	GetName() string
-	Close()
-	Write(object finder.BucketObject)
-}
-
 var dataStoreName = map[DataStoreType]string{
 	LocalDB: "localdb",
 	Memory:  "memory",
@@ -48,25 +26,58 @@ func (dst DataStoreType) String() string {
 	return dataStoreName[dst]
 }
 
-func (ds DataStore) GetName() string {
-	return ds.Name
+// DataStore base class
+type DataStore struct {
+	Name       string
+	BucketChan <-chan finder.BucketObjectBatch
 }
 
-func (ds DataStore) Write(object finder.BucketObject) {
-	slog.Error("ds write not impl")
+// Individual DataStore object
+type IDataStore interface {
+	Close()
+	Run(ctx context.Context)
+	Stats() string
+	Write(object finder.BucketObject)
 }
 
-func InitDataStore(ctx context.Context, config *dspm_config.Config) (IDataStore, error) {
+// DataStore service
+type DataStoreService struct {
+	DSImpl IDataStore
+}
+
+// DataStore service interface
+type IDataStoreService interface {
+	Run(ctx context.Context)
+}
+
+func InitDataStoreService(
+	ctx context.Context,
+	config *dspm_config.Config,
+	messageChan <-chan finder.BucketObjectBatch,
+) (IDataStoreService, error) {
+	slog.Info("init datastore service")
+
+	service := DataStoreService{}
+
 	// Config validator will ensure only one DS is enabled
 	if config.DataStore.LocalDB.Enabled {
-		ds, err := initDSLocalDB(ctx, config.DataStore.LocalDB.Path)
-		return ds, err
+		ds, err := initDSLocalDB(ctx, config.DataStore.LocalDB.Path, messageChan)
+		if err != nil {
+			return nil, fmt.Errorf("cannot init localdb datastore")
+		}
+		service.DSImpl = ds
 	} else if config.DataStore.Memory.Enabled {
-		ds, err := InitDSMemory(ctx)
-		return ds, err
+		ds, err := InitDSMemory(ctx, messageChan)
+		if err != nil {
+			return nil, fmt.Errorf("cannot init memory datastore")
+		}
+		service.DSImpl = ds
 	} else {
-		return DataStore{}, fmt.Errorf("ds not implemented")
+		return nil, fmt.Errorf("ds not implemented")
 	}
+
+	slog.Info("datastore service initialiserd")
+	return service, nil
 }
 
 func (ds DataStore) Close() {
@@ -74,25 +85,27 @@ func (ds DataStore) Close() {
 	slog.Info("base ds close")
 }
 
-func RunDataService(ctx context.Context, ids IDataStore, messageChan <-chan finder.BucketObjectBatch) {
-	slog.Info("starting DataService")
+func (dss DataStoreService) Run(ctx context.Context) {
+	slog.Info("running DataStoreService")
 
-	run := true
-	for run {
-		select {
-		case <-ctx.Done():
-			slog.Info("stopping DataService")
-			run = false
+	wg := sync.WaitGroup{}
 
-		case msg1 := <-messageChan:
-			for _, object := range msg1 {
-				slog.Info("rx scrape_data", "key", object.Key, "size", object.Size)
-				ids.Write(object)
-			}
-		}
+	dataStoreContext, dataStoreCancel := context.WithCancel(ctx)
+	defer dataStoreCancel()
 
-		time.Sleep(time.Second)
-	}
+	// Handle stop signal
+	go func() {
+		<-ctx.Done()
+		slog.Info("stopping DataStoreService")
+		dataStoreCancel()
+	}()
 
-	slog.Info("terminated DataService")
+	// Run the datastore
+	wg.Go(func() {
+		dss.DSImpl.Run(dataStoreContext)
+	})
+
+	wg.Wait()
+
+	slog.Info("terminated DataStoreService")
 }

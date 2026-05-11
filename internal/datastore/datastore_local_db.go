@@ -4,21 +4,28 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"log/slog"
 
 	_ "github.com/mattn/go-sqlite3"
+	finder "github.com/pgcrooks/dspm-scanner/internal/finder"
 )
 
 const ARTIFACT_TABLE string = "artifacts"
 
-func initDSLocalDB(ctx context.Context, dbName string) (IDataStore, error) {
+type dataStoreLocalDB struct {
+	DS    DataStore
+	SqlDB *sql.DB
+}
+
+func initDSLocalDB(ctx context.Context, dbName string, bucketChan <-chan finder.BucketObjectBatch) (IDataStore, error) {
 	slog.Info("Opening", "dbName", dbName)
-	ds := DataStoreLocalDB{}
-	ds.Name = "fooDB"
+	ds := dataStoreLocalDB{}
+	ds.DS.Name = "fooDB"
 	db, err := sql.Open("sqlite3", dbName)
 	if err != nil {
-		return &ds, err
+		return ds, err
 	}
 
 	// Create table
@@ -32,13 +39,45 @@ func initDSLocalDB(ctx context.Context, dbName string) (IDataStore, error) {
 	}
 
 	ds.SqlDB = db
-	ds.Type = LocalDB
 	return ds, nil
 }
 
-func (ds DataStoreLocalDB) Close() {
-	err := ds.SqlDB.Close()
+func (dsl dataStoreLocalDB) Close() {
+	err := dsl.SqlDB.Close()
 	if err != nil {
 		slog.Error("unable to close db", "err", err)
 	}
+}
+
+func (dsl dataStoreLocalDB) Run(ctx context.Context) {
+	slog.Info("running DataStoreMemory", "obj", dsl)
+
+	run := true
+	for run {
+		select {
+		case <-ctx.Done():
+			slog.Info("stopping DataStoreMemory")
+			run = false
+
+		case msg1 := <-dsl.DS.BucketChan:
+			for _, object := range msg1 {
+				slog.Info("rx", "key", object.Key, "size", object.Size)
+				dsl.Write(object)
+			}
+			slog.Info(dsl.Stats())
+
+		default:
+			//TODO run separate read and write coroutines
+		}
+
+		time.Sleep(time.Second)
+	}
+}
+
+func (dsl dataStoreLocalDB) Stats() string {
+	return "not_impl"
+}
+
+func (dsl dataStoreLocalDB) Write(object finder.BucketObject) {
+	slog.Warn("not impl")
 }

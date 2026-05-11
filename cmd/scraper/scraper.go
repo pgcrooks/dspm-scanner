@@ -41,16 +41,9 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// DataStore
-	ds, err := datastore.InitDataStore(ctx, &config)
-	if err != nil {
-		panic(fmt.Errorf("cannot init ds: %w", err))
-	}
-	defer ds.Close()
-
 	// Communication channels
-	finderChan := make(chan finder.BucketObjectBatch, 100)    // finder -> datastore
-	dataStoreChan := make(chan finder.BucketObjectBatch, 100) // datastore -> scanner
+	finderToDataStoreChan := make(chan finder.BucketObjectBatch, 100)
+	dataStoreToScannerChan := make(chan finder.BucketObjectBatch, 100)
 
 	// Group all routines
 	wg := sync.WaitGroup{}
@@ -66,19 +59,24 @@ func main() {
 		cancel()
 	}()
 
-	finderService, err := finder.InitFinderService(ctx, &config, finderChan)
+	datastoreService, err := datastore.InitDataStoreService(ctx, &config, finderToDataStoreChan)
+	if err != nil {
+		panic(fmt.Errorf("cannot init datastore service: %w", err))
+	}
+
+	finderService, err := finder.InitFinderService(ctx, &config, finderToDataStoreChan)
 	if err != nil {
 		panic(fmt.Errorf("cannot init finder service: %w", err))
 	}
 
-	scannerService, err := scanner.InitScannerService(ctx, &config, dataStoreChan)
+	scannerService, err := scanner.InitScannerService(ctx, &config, dataStoreToScannerChan)
 	if err != nil {
 		panic(fmt.Errorf("cannot init scanner service: %w", err))
 	}
 
 	// Run workers
 	wg.Go(func() {
-		datastore.RunDataService(ctx, ds, finderChan)
+		datastoreService.Run(ctx)
 	})
 	wg.Go(func() {
 		finderService.Run(ctx)
