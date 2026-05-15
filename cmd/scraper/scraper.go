@@ -59,7 +59,7 @@ func main() {
 		cancel()
 	}()
 
-	datastoreService, err := datastore.InitDataStoreService(ctx, &config, finderToDataStoreChan)
+	dataStore, err := datastore.NewDataStore(ctx, &config, finderToDataStoreChan)
 	if err != nil {
 		panic(fmt.Errorf("cannot init datastore service: %w", err))
 	}
@@ -76,7 +76,7 @@ func main() {
 
 	// Run workers
 	wg.Go(func() {
-		datastoreService.Run(ctx)
+		dataStore.Run(ctx)
 	})
 	wg.Go(func() {
 		finderService.Run(ctx)
