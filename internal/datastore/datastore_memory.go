@@ -39,39 +39,39 @@ type dataStoreMemory struct {
 	Records []record
 }
 
-func InitDSMemory(ctx context.Context, bucketChan <-chan finder.BucketObjectBatch) (IDataStore, error) {
-	slog.Info("Creating memory DS")
-	// ds := DataStoreMemory{}
-	// return ds, nil
-	return &dataStoreMemory{
+func newDSMemory(bucketChan <-chan finder.BucketObjectBatch) (dataStoreMemory, error) {
+	slog.Info("creating memory DS")
+	return dataStoreMemory{
 		DataStore: DataStore{
 			Name:       "memory",
+			Type:       Memory,
 			BucketChan: bucketChan,
 		},
 	}, nil
 }
 
-func (ds dataStoreMemory) Close() {
+func (dsm *dataStoreMemory) Close() {
 	// No-op
-	slog.Info("ds memory close")
+	slog.Info("closed")
 }
 
-func (ds dataStoreMemory) Run(ctx context.Context) {
-	slog.Info("running DataStoreMemory", "obj", ds)
+func (dsm *dataStoreMemory) Run(ctx context.Context) {
+	slog.Info("running dataStoreMemory", "obj", dsm)
 
 	run := true
 	for run {
 		select {
 		case <-ctx.Done():
-			slog.Info("stopping DataStoreMemory")
+			slog.Info("stopping dataStoreMemory")
 			run = false
 
-		case msg1 := <-ds.BucketChan:
+		case msg1 := <-dsm.BucketChan:
 			for _, object := range msg1 {
 				slog.Info("rx", "key", object.Key, "size", object.Size)
-				ds.Write(object)
+				dsm.Write(object)
 			}
-			slog.Info(ds.Stats())
+			// Be loud for now
+			slog.Info(dsm.Stats())
 
 		default:
 			//TODO run separate read and write coroutines
@@ -81,9 +81,9 @@ func (ds dataStoreMemory) Run(ctx context.Context) {
 	}
 }
 
-func (ds dataStoreMemory) Write(object finder.BucketObject) {
-	slog.Info("write", "key", object.Key, "size", object.Size)
-	ds.Records = append(ds.Records, record{
+func (dsm *dataStoreMemory) Write(object finder.BucketObject) {
+	slog.Info("write", "key", object.Key, "size", object.Size, "p", fmt.Sprintf("%p", &dsm))
+	dsm.Records = append(dsm.Records, record{
 		Key:    object.Key,
 		Size:   object.Size,
 		Source: finder.LocalFS,
@@ -92,10 +92,11 @@ func (ds dataStoreMemory) Write(object finder.BucketObject) {
 	})
 }
 
-func (ds dataStoreMemory) Stats() string {
+func (dsm *dataStoreMemory) Stats() string {
 	return fmt.Sprintf(
-		"DataStoreMemory: len=%d cap=%d",
-		len(ds.Records),
-		cap(ds.Records),
+		"dataStoreMemory: len=%d cap=%d p=%p",
+		len(dsm.Records),
+		cap(dsm.Records),
+		&dsm,
 	)
 }

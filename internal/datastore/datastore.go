@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"sync"
 
 	dspm_config "github.com/pgcrooks/dspm-scanner/internal/config"
 	finder "github.com/pgcrooks/dspm-scanner/internal/finder"
@@ -29,83 +28,30 @@ func (dst DataStoreType) String() string {
 // DataStore base class
 type DataStore struct {
 	Name       string
+	Type       DataStoreType
 	BucketChan <-chan finder.BucketObjectBatch
 }
 
-// Individual DataStore object
 type IDataStore interface {
+	Run(ctx context.Context)
 	Close()
-	Run(ctx context.Context)
-	Stats() string
-	Write(object finder.BucketObject)
 }
 
-// DataStore service
-type DataStoreService struct {
-	DSImpl IDataStore
-}
-
-// DataStore service interface
-type IDataStoreService interface {
-	Run(ctx context.Context)
-}
-
-func InitDataStoreService(
+func NewDataStore(
 	ctx context.Context,
 	config *dspm_config.Config,
 	messageChan <-chan finder.BucketObjectBatch,
-) (IDataStoreService, error) {
-	slog.Info("init datastore service")
-
-	service := DataStoreService{}
+) (IDataStore, error) {
+	slog.Info("init datastore")
 
 	// Config validator will ensure only one DS is enabled
 	if config.DataStore.LocalDB.Enabled {
-		ds, err := initDSLocalDB(ctx, config.DataStore.LocalDB.Path, messageChan)
-		if err != nil {
-			return nil, fmt.Errorf("cannot init localdb datastore")
-		}
-		service.DSImpl = ds
+		ds, err := newDSLocalDB(config.DataStore.LocalDB.Path, messageChan)
+		return &ds, err
 	} else if config.DataStore.Memory.Enabled {
-		ds, err := InitDSMemory(ctx, messageChan)
-		if err != nil {
-			return nil, fmt.Errorf("cannot init memory datastore")
-		}
-		service.DSImpl = ds
-	} else {
-		return nil, fmt.Errorf("ds not implemented")
+		ds, err := newDSMemory(messageChan)
+		return &ds, err
 	}
 
-	slog.Info("datastore service initialiserd")
-	return service, nil
-}
-
-func (ds DataStore) Close() {
-	// Can be overridden by child impls
-	slog.Info("base ds close")
-}
-
-func (dss DataStoreService) Run(ctx context.Context) {
-	slog.Info("running DataStoreService")
-
-	wg := sync.WaitGroup{}
-
-	dataStoreContext, dataStoreCancel := context.WithCancel(ctx)
-	defer dataStoreCancel()
-
-	// Handle stop signal
-	go func() {
-		<-ctx.Done()
-		slog.Info("stopping DataStoreService")
-		dataStoreCancel()
-	}()
-
-	// Run the datastore
-	wg.Go(func() {
-		dss.DSImpl.Run(dataStoreContext)
-	})
-
-	wg.Wait()
-
-	slog.Info("terminated DataStoreService")
+	return nil, fmt.Errorf("ds not implemented")
 }

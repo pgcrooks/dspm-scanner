@@ -15,14 +15,20 @@ import (
 const ARTIFACT_TABLE string = "artifacts"
 
 type dataStoreLocalDB struct {
-	DS    DataStore
+	DataStore
 	SqlDB *sql.DB
 }
 
-func initDSLocalDB(ctx context.Context, dbName string, bucketChan <-chan finder.BucketObjectBatch) (IDataStore, error) {
+func newDSLocalDB(dbName string, bucketChan <-chan finder.BucketObjectBatch) (dataStoreLocalDB, error) {
+	slog.Info("creating local db DS")
 	slog.Info("Opening", "dbName", dbName)
-	ds := dataStoreLocalDB{}
-	ds.DS.Name = "fooDB"
+	ds := dataStoreLocalDB{
+		DataStore: DataStore{
+			Name:       "sqlite",
+			Type:       LocalDB,
+			BucketChan: bucketChan,
+		},
+	}
 	db, err := sql.Open("sqlite3", dbName)
 	if err != nil {
 		return ds, err
@@ -42,29 +48,28 @@ func initDSLocalDB(ctx context.Context, dbName string, bucketChan <-chan finder.
 	return ds, nil
 }
 
-func (dsl dataStoreLocalDB) Close() {
+func (dsl *dataStoreLocalDB) Close() {
 	err := dsl.SqlDB.Close()
 	if err != nil {
 		slog.Error("unable to close db", "err", err)
 	}
 }
 
-func (dsl dataStoreLocalDB) Run(ctx context.Context) {
-	slog.Info("running DataStoreMemory", "obj", dsl)
+func (dsl *dataStoreLocalDB) Run(ctx context.Context) {
+	slog.Info("running dataStoreLocalDB", "obj", dsl)
 
 	run := true
 	for run {
 		select {
 		case <-ctx.Done():
-			slog.Info("stopping DataStoreMemory")
+			slog.Info("stopping dataStoreLocalDB")
 			run = false
 
-		case msg1 := <-dsl.DS.BucketChan:
+		case msg1 := <-dsl.BucketChan:
 			for _, object := range msg1 {
 				slog.Info("rx", "key", object.Key, "size", object.Size)
 				dsl.Write(object)
 			}
-			slog.Info(dsl.Stats())
 
 		default:
 			//TODO run separate read and write coroutines
@@ -74,10 +79,10 @@ func (dsl dataStoreLocalDB) Run(ctx context.Context) {
 	}
 }
 
-func (dsl dataStoreLocalDB) Stats() string {
+func (dsl *dataStoreLocalDB) Stats() string {
 	return "not_impl"
 }
 
-func (dsl dataStoreLocalDB) Write(object finder.BucketObject) {
+func (dsl *dataStoreLocalDB) Write(object finder.BucketObject) {
 	slog.Warn("not impl")
 }
