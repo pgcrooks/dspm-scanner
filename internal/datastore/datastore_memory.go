@@ -9,34 +9,10 @@ import (
 	finder "github.com/pgcrooks/dspm-scanner/internal/finder"
 )
 
-type recordStatus int
-
-const (
-	Idle recordStatus = iota
-	Scanning
-	Scanned
-)
-
-type recordResult int
-
-const (
-	None recordResult = iota
-	Clean
-	Alert
-)
-
-type record struct {
-	Key    string
-	Size   int64
-	Source finder.FinderType
-	Status recordStatus
-	Result recordResult
-}
-
 type dataStoreMemory struct {
 	DataStore
-	Type    DataStoreType
-	Records []record
+	Records map[string]ObjectRecord
+	LastID  int
 }
 
 func newDSMemory(bucketChan <-chan finder.BucketObjectBatch) (dataStoreMemory, error) {
@@ -47,6 +23,8 @@ func newDSMemory(bucketChan <-chan finder.BucketObjectBatch) (dataStoreMemory, e
 			Type:       Memory,
 			BucketChan: bucketChan,
 		},
+		Records: make(map[string]ObjectRecord),
+		LastID:  0,
 	}, nil
 }
 
@@ -82,21 +60,44 @@ func (dsm *dataStoreMemory) Run(ctx context.Context) {
 }
 
 func (dsm *dataStoreMemory) Write(object finder.BucketObject) {
-	slog.Info("write", "key", object.Key, "size", object.Size, "p", fmt.Sprintf("%p", &dsm))
-	dsm.Records = append(dsm.Records, record{
+	slog.Info("write", "key", object.Key, "size", object.Size)
+
+	// Check if path already exists, and update if necessary
+	// A cache should really be used for this
+	for recordID, record := range dsm.Records {
+		if object.Key == record.Key {
+			if object.Size == record.Size {
+				// Skip, already exists and is up to date
+				slog.Info("already up to date", "recordID", recordID)
+				return
+			} else {
+				// Exists but size has changed, delete and recreate
+				slog.Info("refreshing", "recordID", recordID)
+				delete(dsm.Records, recordID)
+
+				// No need to check the rest
+				break
+			}
+		}
+	}
+
+	id := dsm.makeID()
+	slog.Info("creating", "recordID", id)
+	dsm.Records[id] = ObjectRecord{
+		ID:     id,
+		Hash:   "",
 		Key:    object.Key,
 		Size:   object.Size,
 		Source: finder.LocalFS,
-		Status: Idle,
-		Result: None,
-	})
+	}
 }
 
 func (dsm *dataStoreMemory) Stats() string {
-	return fmt.Sprintf(
-		"dataStoreMemory: len=%d cap=%d p=%p",
-		len(dsm.Records),
-		cap(dsm.Records),
-		&dsm,
-	)
+	return fmt.Sprintf("dataStoreMemory: len=%d", len(dsm.Records))
+}
+
+func (dsm *dataStoreMemory) makeID() string {
+	// TODO worry about wrapping
+	dsm.LastID++
+	return fmt.Sprintf("ds-%08d", dsm.LastID)
 }
