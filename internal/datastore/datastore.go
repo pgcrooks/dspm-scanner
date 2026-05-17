@@ -37,6 +37,28 @@ type IDataStore interface {
 	Close()
 }
 
+type ObjectRecord struct {
+	ID     string
+	Key    string
+	Size   int64
+	Hash   string
+	Source finder.FinderType
+	Type   DataStoreType
+}
+
+type ScanStatus int
+
+const (
+	NotStarted ScanStatus = iota
+	Scanning
+	ScanCompleted
+	ScanAborted
+)
+
+type ScanReport struct {
+	ObjectId string
+}
+
 func NewDataStore(
 	ctx context.Context,
 	config *dspm_config.Config,
