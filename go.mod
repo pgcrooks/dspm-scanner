@@ -5,7 +5,7 @@ go 1.26.1
 require (
 	github.com/aws/aws-sdk-go-v2 v1.42.1
 	github.com/aws/aws-sdk-go-v2/config v1.32.30
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.104.2
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.105.2
 	github.com/mattn/go-sqlite3 v1.14.48
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
