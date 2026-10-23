@@ -5,8 +5,12 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    labels:
+      - "dependency"
 
   - package-ecosystem: "github-actions"
     directory: ".github/workflows"
     schedule:
       interval: "weekly"
+    labels:
+      - "dependency"
