@@ -6,11 +6,11 @@ updates:
     schedule:
       interval: "weekly"
     labels:
-      - "dependency"
+      - "dependencies"
 
   - package-ecosystem: "github-actions"
     directory: ".github/workflows"
     schedule:
       interval: "weekly"
     labels:
-      - "dependency"
+      - "dependencies"
